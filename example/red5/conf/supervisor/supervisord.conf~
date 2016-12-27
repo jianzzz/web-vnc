@@ -1,0 +1,13 @@
+[supervisord]
+nodaemon=true
+ 
+[program:openoffice4] 
+command=/bin/bash -c "/opt/openoffice4/program/soffice -headless -accept=\"socket,host=127.0.0.1,port=8100;urp;\" -nofirststartwizard" 
+autostart=true
+autorestart=true
+ 
+[program:red5] 
+command=/bin/bash -c "/usr/local/red5-server/red5.sh  " 
+autostart=true
+autorestart=true
+ 
