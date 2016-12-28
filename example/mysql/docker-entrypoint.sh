@@ -109,41 +109,51 @@ function start_xvfb() {
   	1> "${LOGS_DIR}/xvfb-tryouts-stdout.log" \
 	2> "${LOGS_DIR}/xvfb-tryouts-stderr.log" &
 }
- 
-# Find a free DISPLAY port starting with current DISP_N if any
-i=0
-while true ; do
-    let i=${i}+1
-    export DISP_N=$(get_free_display)
-    export DISPLAY=":${DISP_N}"
-    export XEPHYR_DISPLAY=":${DISP_N}"
-    if ! start_xvfb; then
-      echo "-- WARN: start_xvfb() failed!" 1>&3
-    fi
-    if timeout --foreground "${WAIT_FOREGROUND_RETRY}" wait-xvfb.sh &> "${LOGS_DIR}/wait-xvfb-stdout.log"; then
-      break
-    else
-      echo "-- WARN: wait-xvfb.sh failed! for DISPLAY=${DISPLAY}" 1>&3
-    fi
-    if [ ${i} -gt ${MAX_DISPLAY_SEARCH} ]; then
-      echo "-- ERROR: Failed to start Xvfb at $0 after many retries." 1>&2 1>&3
-      break
-    fi
-done 
+
+echo ${RUN_VNC} 1>&3
+if [ "${RUN_VNC}" = "yes" ]; then
+	# Find a free DISPLAY port starting with current DISP_N if any
+	i=0
+	while true ; do
+	    let i=${i}+1
+	    export DISP_N=$(get_free_display)
+	    export DISPLAY=":${DISP_N}"
+	    export XEPHYR_DISPLAY=":${DISP_N}"
+	    if ! start_xvfb; then
+	      echo "-- WARN: start_xvfb() failed!" 1>&3
+	    fi
+	    if timeout --foreground "${WAIT_FOREGROUND_RETRY}" wait-xvfb.sh &> "${LOGS_DIR}/wait-xvfb-stdout.log"; then
+	      break
+	    else
+	      echo "-- WARN: wait-xvfb.sh failed! for DISPLAY=${DISPLAY}" 1>&3
+	    fi
+	    if [ ${i} -gt ${MAX_DISPLAY_SEARCH} ]; then
+	      echo "-- ERROR: Failed to start Xvfb at $0 after many retries." 1>&2 1>&3
+	      break
+	    fi
+	done 
 
 
-#timeout --foreground ${WAIT_TIMEOUT} start-xvfb.sh
-timeout --foreground ${WAIT_TIMEOUT} wait-xvfb.sh
-timeout --foreground ${WAIT_TIMEOUT} start-xmanager.sh
-timeout --foreground ${WAIT_TIMEOUT} wait-xmanager.sh
-timeout --foreground ${WAIT_TIMEOUT} start-vnc.sh 
-timeout --foreground ${WAIT_TIMEOUT} wait-vnc.sh 
-timeout --foreground ${WAIT_TIMEOUT} start-novnc.sh
-timeout --foreground ${WAIT_TIMEOUT} wait-novnc.sh
+	#timeout --foreground ${WAIT_TIMEOUT} start-xvfb.sh
+	timeout --foreground ${WAIT_TIMEOUT} wait-xvfb.sh
+	timeout --foreground ${WAIT_TIMEOUT} start-xmanager.sh
+	timeout --foreground ${WAIT_TIMEOUT} wait-xmanager.sh
+	timeout --foreground ${WAIT_TIMEOUT} start-vnc.sh 
+	timeout --foreground ${WAIT_TIMEOUT} wait-vnc.sh 
+	timeout --foreground ${WAIT_TIMEOUT} start-novnc.sh
+	timeout --foreground ${WAIT_TIMEOUT} wait-novnc.sh
+fi
 
-#echo -n "supervisord --version=" && supervisord --version
-#supervisord -c /etc/supervisor/supervisord.conf -l ${LOGS_DIR}/supervisord.log --nodaemon &
-#SUPERVISOR_PID=$!
+echo -n "supervisord --version=" && supervisord --version
+supervisord -c /etc/supervisor/supervisord.conf -l ${LOGS_DIR}/supervisord.log --nodaemon &
+SUPERVISOR_PID=$!
+
+#we should push `exec "$@"` before `wait "${SUPERVISOR_PID}"`, so we can run like `docker run --name test mysql-vnc /bin/sh -c "..."`,
+#and so `/bin/sh -c` takes effect;
+#if we put `exec "$@"` after `wait "${SUPERVISOR_PID}"`, it just traps into supervisor and `/bin/sh -c` will not take effect;
+exec "$@"
+
 # tells bash to wait until child processes have exited
-#wait "${SUPERVISOR_PID}"
- 
+wait "${SUPERVISOR_PID}"
+
+  

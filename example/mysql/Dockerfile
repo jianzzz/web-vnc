@@ -55,6 +55,7 @@ RUN wget -nv -O noVNC.zip \
 #DISP_N : Display number; see docker-entrypoint.sh for $DISPLAY
 #XMANAGER : openbox|fluxbox
 #VNC_PASSWORD : if value is "no", then use no password; otherwides use password
+#RUN_VNC : if value is "yes", then we run vnc; otherwides we do not run vnc
 ENV BIN_UTILS="/usr/bin" \
     LOGS_DIR="/var/log/container" \
     WAIT_TIMEOUT="45s" \
@@ -70,8 +71,9 @@ ENV BIN_UTILS="/usr/bin" \
   
     DISP_N="-1" \ 
     MAX_DISPLAY_SEARCH=99 \
-    WAIT_FOREGROUND_RETRY="2s" 
+    WAIT_FOREGROUND_RETRY="2s" \
 
+    RUN_VNC="yes"
 
 RUN 	mkdir -p /root/.vnc \ 
 	&& mv noVNC /root/ 
@@ -90,5 +92,6 @@ RUN 	chmod +x /vnc.sh
 
 #cause mysql image use ENTRYPOINT ["docker-entrypoint.sh"], we overwrite it here, but run "/vnc.sh" in supervisor
 #ENTRYPOINT ["/entrypoint.sh"]
-ENTRYPOINT ["supervisord","-c","/etc/supervisor/supervisord.conf"]
+#ENTRYPOINT ["supervisord","-c","/etc/supervisor/supervisord.conf"]
+ENTRYPOINT ["/vnc.sh"]
  
